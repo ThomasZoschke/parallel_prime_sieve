@@ -222,9 +222,9 @@ uint64_t count_primes_and_negate (uint64_t *const sieve, const uint64_t from, co
 // caller has to do the bounds check calculation for sieve[]
 // sieve bits get negated during counting so that the primes become the one bits
 {
-    ASSERT( from<=to );
-    ASSERT( from!=~0uLL );
     ASSERT( to!=0 );
+    ASSERT( from!=~0uLL );
+    ASSERT( from<=to );
     uint64_t count = 0;
     if (from&to&1 && 0==(from>>1)%WORD_BITS && (WORD_BITS-1)==(to>>1)%WORD_BITS) { // aligned and odd, this is fast
         std::ptrdiff_t first_word = (from>>1)/WORD_BITS;
@@ -252,7 +252,7 @@ uint64_t eratosthenes_odd_single_block_seq
     uint32_t               isqrt_max_num      // square root of topmost block upper inclusive bound rounded down
     )
 // sieve a block
-// returns count of prime numbers in range [from..to] (inclusive range) if counting is enabled, 0 otherwise
+// returns count of prime numbers in range [from..to] (inclusive range)
 {
     uint32_t limit = (int32_t) sqrt (to);
     auto iter = sieve_prime.begin ();
@@ -301,7 +301,7 @@ uint64_t eratosthenes_odd_single_block_par
     const std::vector<uint32_t>& sieve_prime   // sieve prime cache vector, in (large enough)
     )
 // sieve a block
-// returns count of prime numbers in range [from..to] (inclusive range) if counting is enabled, 0 otherwise
+// returns count of prime numbers in range [from..to] (inclusive range)
 {
     uint32_t limit = (int32_t) sqrt (to);
     auto iter = sieve_prime.begin ();
@@ -362,6 +362,9 @@ uint32_t guess_prim_num_count (uint64_t from, uint64_t to)
     }
     return 0;
 }
+
+
+#define SQUARE_64( x ) ((unsigned long long)(x)*(unsigned long long)(x))
 
 
 uint64_t eratosthenes_odd_blockwise 
