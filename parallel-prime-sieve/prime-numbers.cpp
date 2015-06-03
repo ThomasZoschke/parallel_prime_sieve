@@ -113,8 +113,6 @@ using namespace std;
     (1uLL+(uint64_t(B)<<1uLL))
 
 
-#define SQUARE_64(N) (uint64_t(N)*uint64_t(N))
-
 
 __extension__  __attribute__ ((noreturn))
 void die (const char* last_msg)
@@ -407,14 +405,14 @@ uint64_t eratosthenes_odd_blockwise
         prim_num_count += eratosthenes_odd_single_block_seq (sieve, from, to, sieve_prime, parallel_OK, isqrt_max_num);
         if (parallel_OK) {
             next_from = from + n_slice;
-            printf ("going parallel\n");
+            puts ("going parallel");
             goto Parallel;
         }
     }    
     return prim_num_count;
 Parallel:
-    //if (VERBOSE) printf ("num procs %d\n", omp_get_num_procs ());
-    //omp_set_num_threads (omp_get_num_procs ());
+    if (VERBOSE) printf ("num procs %d\n", omp_get_num_procs ());
+    omp_set_num_threads (omp_get_num_procs ());
 #pragma omp parallel for schedule(dynamic) reduction(+:prim_num_count) 
     for (uint64_t from = next_from; from <= max_num; from += n_slice) {
         uint64_t to = std::min(from+n_slice-2,max_num);
@@ -479,7 +477,7 @@ enum class SieveType : int8_t
     UNKNOWN_SIEVE_TYPE =0,
     BITWISE_SIEVE_OF_ODDS_ONLY =1,
     BITWISE_ALLNUMS_SIEVE_TYPE =2,
-    ONE_NUMBER_PER_BYTE_SIEVE_OF_ODDS =3,
+    ONE_NUMBER_PER_BYTE_SIEVE_OF_ODDS_ONLY =3,
     ONE_NUMBER_PER_BYTE_ALLNUMS_SIEVE_TYPE =4
 };
 
@@ -502,7 +500,14 @@ struct sieve_file_header
 
 enum Endianes detect_host_endianess ()
 {
-    return Endianes::_BIG_ENDIAN;
+
+    const uint32_t  endian_test_value=0x01020304;
+    const char*     p = reinterpret_cast<const char*>(&endian_test_value);
+    if (p[0]<p[1]&&p[1]<p[2]&&p[2]<p[3])
+        return Endianes::_BIG_ENDIAN;
+    if (p[0]>p[1]&&p[1]>p[2]&&p[2]>p[3])
+        return Endianes::_LITTLE_ENDIAN; //e.g. x86
+    return Endianes::_SICK_ENDIAN;
 }
 
 
@@ -566,8 +571,10 @@ int main ()
     size_t sieve_size = adjust_large (upper_bound);
     write_header (f,upper_bound);
     uint64_t prime_number_count=0;
+    Stopwatch sw;
     uint64_t* output = compute_huge_prime_numbers (upper_bound, &prime_number_count, sieve_size);
-    if (!output) die("failed.");
+    sw.stop ();
+    if (!output) die ("failed.");
     cout << "range [1.."<< upper_bound << "]\n";
     cout << "guessed: " << guess_prim_num_count (2,upper_bound) << " primes.\n";
     cout << "counted: " << prime_number_count << " prime numbers in sieve.\n";
@@ -579,8 +586,8 @@ int main ()
             break;
         }
     }
-    cout << "saving.." << endl;
-    
+    cout << " (time used: " << sw.result () << " seconds.)\n";
+    cout << "saving " PRIME_NUMBER_SIEVE_PATH " .." << endl;
     auto rc=fwrite (output, sizeof(uint64_t), sieve_size, f);
     fclose (f);
     return rc==sieve_size ? EXIT_SUCCESS : EXIT_FAILURE;
